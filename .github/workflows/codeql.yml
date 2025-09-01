@@ -1,0 +1,54 @@
+name: "Advanced CodeQL Analysis"
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  schedule:
+    - cron: '0 5 * * 1'  # Every Monday at 05:00 UTC
+
+jobs:
+  codeql:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'javascript', 'python' ] # Add other languages here
+
+    name: Analyze ${{ matrix.language }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          # Uncomment to use custom queries
+          # queries: ./codeql-custom-queries
+          # packs: githubsecuritylab/codeql-noseyparker
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Run CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+      # Optionally upload SARIF results to GitHub Advanced Security
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ${{ steps.analyze.outputs.sarif }}
+
+      # Optionally save SARIF results as artifacts
+      - name: Upload analysis results as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: codeql-results-${{ matrix.language }}
+          path: ${{ steps.analyze.outputs.sarif }}
